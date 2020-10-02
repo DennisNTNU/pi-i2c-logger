@@ -1,4 +1,4 @@
-#include "log_local.h"
+#include "buffered_writer.h"
 
 #include <stdio.h> // for fopen(), fwrite(), fclose()
 #include <stdlib.h> // for calloc()
@@ -10,7 +10,7 @@ static char* buffer_file_path = NULL;
 static unsigned int buffer_alloc_size = 0;
 static unsigned int buffer_size_current = 0;
 
-int log_alloc_buffer(unsigned int byte_count, const char* path)
+int br_alloc_buffer(unsigned int byte_count, const char* path)
 {
     if (buffer == NULL)
     {
@@ -37,7 +37,7 @@ int log_alloc_buffer(unsigned int byte_count, const char* path)
     return -1; // buffer already allocated
 }
 
-void log_dealloc_buffer()
+void br_dealloc_buffer()
 {
     free(buffer);
     free(buffer_file_path);
@@ -46,7 +46,7 @@ void log_dealloc_buffer()
 }
 
 //int add_data_to_buffer(char* data, int byte_count)
-int log_data(char* data, int byte_count)
+int br_data(char* data, int byte_count)
 {
     if (buffer != NULL)
     {
@@ -54,7 +54,7 @@ int log_data(char* data, int byte_count)
         if (new_size > buffer_alloc_size)
         {
             // flush buffer to file
-            if (log_flush_buffer() != 0)
+            if (br_flush_buffer() != 0)
             {
                 printf("Probably lost some period of data just now!\n");
             }
@@ -69,7 +69,7 @@ int log_data(char* data, int byte_count)
     return 1;
 }
 
-int log_flush_buffer()
+int br_flush_buffer()
 {
     if (buffer_size_current != 0)
     {
