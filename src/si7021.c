@@ -82,3 +82,62 @@ int readSi7021(float * data)
 
     return 0;
 }
+
+int readSi7021_fd(int fd_i2c, float* data)
+{
+    if (ioctl(fd_i2c, I2C_SLAVE, 0x40) < 0)
+    {
+        printf("Error setting slave address\n");
+        return -1;
+    }
+
+    char buffer[2];
+    buffer[0] = 0xF5; // measure humidity command
+
+    int nacks = 1;
+    if (write(fd_i2c, buffer, 1) != 1)
+    {
+        printf("Error writing humidity measurement command\n");
+        return -1;
+    }
+
+    struct timespec _200us = {.tv_sec = 0, .tv_nsec = 200000};
+    while (read(fd_i2c, buffer, 2) < 0)
+    {
+        nanosleep(&_200us, 0);
+        nacks++;
+        if (nacks > 100) 
+        {
+            printf("reading humidity. timeout\n");
+            return -1;
+        }
+    }
+
+    float rel = 125*(buffer[0] << 8 | buffer[1]);
+    rel = rel/65536.0 - 6.0;
+
+    buffer[0] = 0xE0; // read temperature from last humidity measurement command
+
+    if (write(fd_i2c, buffer, 1) != 1)
+    {
+        printf("Error writing temperature read command\n");
+        return -1;
+    }
+    
+    if (read(fd_i2c, buffer, 2) < 0)
+    {
+        printf("Error reading temperature\n");
+        return -1;
+    }
+
+    float temp = 175.25*(buffer[0] << 8 | buffer[1]);
+    temp = temp/65536.0 - 46.85;
+
+    //printf("ackked. nacks: %i\n", nacks);
+
+    data[0] = rel;
+    data[1] = temp;
+
+
+    return 0;
+}

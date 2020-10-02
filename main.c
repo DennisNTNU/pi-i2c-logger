@@ -20,34 +20,12 @@
 
 #include "si7021.h"
 #include "tmp102.h"
-#include "log_local.h"
+#include "buffered_writer.h"
 #include "log_system.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 
-static int running = 1;
-
-void signalHandler(int signal)
-{
-    if (signal == SIGINT)
-    {
-        running = 0;
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
 int writeADC(unsigned short val);
-
-////////////////////////////////////////////////////////////////////////////////
-
-struct logger_options
-{
-    char ip_port_str[32];
-    unsigned short period_ms;
-    int do_local_logging;
-    int do_network_logging;
-};
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -82,6 +60,7 @@ int parse_args(int argc, char** argv, struct logger_options* optns)
     {
         switch (c)
         {
+            // TODO let these flags define which sensor are going to be logged
         case 'h':
             printf("Si7021 option \"%c\"\n", c);
             float hum_temp_buffer[2];
@@ -147,7 +126,7 @@ int parse_args(int argc, char** argv, struct logger_options* optns)
 
 
 void logging(struct logger_options* optns)
-{
+{/*
     float humTemp[2];
     float temp;
 
@@ -166,23 +145,31 @@ void logging(struct logger_options* optns)
     {
         printf("Could not create socket\n");
         return;
-    }
+    }*/
 
-    int local_logging_ok = 1;
+    //int local_logging_ok = 1;
     if (optns->do_local_logging)
     {
+        log_system_init(2);
+        log_system_add_sensor(readSi7021_fd, 2, "si7021_humidity, si7021_temperature");
+        log_system_add_sensor(readTMP102_fd, 1, "tmp102_temperature");
+        log_system_enable_file_logging("fridge_temperature_humidity");
+
+        log_start();
+
+        /*
         printf("Initing local log buffer & path\n");
         struct timeval t;
         gettimeofday(&t, NULL);
         char logfilename[32];
         snprintf(logfilename, 32, "%li_data.log", t.tv_sec);
 
-        local_logging_ok = log_alloc_buffer(1024*4, logfilename); // 4KiB
+        local_logging_ok = br_alloc_buffer(1024*4, logfilename); // 4KiB
         if (local_logging_ok == 0)
         {
             char header[] = "time, humidity, temp si7021, temp tmp102\n";
             int headerlen = strlen(header);
-            if (log_data(header, headerlen) != 0)
+            if (br_data(header, headerlen) != 0)
             {
                 printf("Error logging header\n");
             }
@@ -190,9 +177,9 @@ void logging(struct logger_options* optns)
         else
         {
             printf("local logging not ok: %i\n", local_logging_ok);
-        }
+        }*/
     }
-
+/*
     const struct timespec delay = {.tv_sec = optns->period_ms/1000, .tv_nsec = (optns->period_ms % 1000) * 1000000};
     char buffer_network[64];
     char buffer_local[64];
@@ -234,7 +221,7 @@ void logging(struct logger_options* optns)
             int len = strlen(buffer_local);
             if (local_logging_ok == 0)
             {
-                if (log_data(buffer_local, len) != 0)
+                if (br_data(buffer_local, len) != 0)
                 {
                     printf("Error logging data\n");
                 }
@@ -243,9 +230,9 @@ void logging(struct logger_options* optns)
         nanosleep(&delay, 0);
     }
     printf("Flushing data to file before exiting\n");
-    log_flush_buffer();
-    log_dealloc_buffer();
-    close(sock);
+    br_flush_buffer();
+    br_dealloc_buffer();
+    close(sock);*/
 }
 
 
@@ -258,7 +245,6 @@ void logging(struct logger_options* optns)
 
 int main(int argc, char** argv)
 {
-    signal(SIGINT, signalHandler);
 
     struct logger_options optns;
     print_args(argc, argv);

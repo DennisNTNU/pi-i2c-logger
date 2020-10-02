@@ -43,3 +43,31 @@ int readTMP102(float * temp)
     
     return 0;
 }
+
+int readTMP102_fd(int fd_i2c, float* temp)
+{
+    if (ioctl(fd_i2c, I2C_SLAVE, 0x48) < 0)
+    {
+        printf("Error setting slave address\n");
+        return -1;
+    }
+
+    char buffer[4];
+    char data = 0x00;
+    if (write(fd_i2c, &data, 1) < 0)
+    {
+        printf("error writing temp reg address\n");
+    }
+
+    if (read(fd_i2c, buffer, 2) < 0)
+    {
+        printf("error reading temp reg\n");
+    }
+
+    //printf("%x %x\n", buffer[0], buffer[1]);
+
+    *temp = ((buffer[0] << 8) | buffer[1]) >> 4;
+    *temp = *temp *0.0625;
+    
+    return 0;
+}

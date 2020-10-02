@@ -1,4 +1,4 @@
-SRC = main.c src/si7021.c src/tmp102.c src/log_local.c
+SRC = main.c src/si7021.c src/tmp102.c src/buffered_writer.c src/log_system.c
 TARGET_DIR = build
 TARGET = $(TARGET_DIR)/main
 
