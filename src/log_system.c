@@ -100,12 +100,12 @@ int log_system_enable_file_logging(char* log_name)
     int header_buffer_offset = 0;
     char header[256];
 
-    header_buffer_offset += snprintf(header, 256, "time, ");
+    header_buffer_offset += snprintf(header, 256, "time");
 
     for (int i = 0; i < lopts.sensor_count; i++)
     {
         header_buffer_offset += snprintf(&(header[header_buffer_offset]),
-            256-header_buffer_offset, "%s, ",
+            256-header_buffer_offset, ", %s",
             lopts.sensors_to_log[i].header_part);
     }
     printf("Full log file name: %s\n", log_file_name);
