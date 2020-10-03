@@ -5,6 +5,8 @@
 #include <string.h> // for memcpy(), strerror();
 #include <errno.h> // for errno
 
+#include "debug_macros.h"
+
 static char* buffer = NULL;
 static char* buffer_file_path = NULL;
 static unsigned int buffer_alloc_size = 0;
@@ -12,19 +14,19 @@ static unsigned int buffer_size_current = 0;
 
 int br_alloc_buffer(unsigned int byte_count, const char* path)
 {
+    DEBUG_PRINT;
     if (buffer == NULL)
     {
         buffer_size_current = 0;
         buffer_alloc_size = byte_count;
-        // check byte count is more than 4KB and less than ... i dont know 4MB?
+        // TODO Maybe check byte count is more than 4KB and less than ... i dont know 4MB?
+        DEBUG_PRINT
         buffer = calloc(1, byte_count);
         if (buffer == NULL)
         {
             return -2; // could not allocate buffer
         }
-
-        // open file path or something? preallocate?
-
+        DEBUG_PRINT
         int pathlen = strlen(path);
         buffer_file_path = malloc(pathlen+1);
         if (buffer_file_path == NULL)
