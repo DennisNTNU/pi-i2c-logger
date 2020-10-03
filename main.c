@@ -132,33 +132,8 @@ int parse_args(int argc, char** argv, struct args_options* optns)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 void configure_logger(struct args_options* optns)
 {
-    log_system_init(optns->total_sensor_count, optns->period_ms);
-    if (optns->log_si7021)
-    {
-        log_system_add_sensor(readSi7021_fd, 2, "si7021_humidity, si7021_temperature");
-    }
-    if (optns->log_tmp102)
-    {
-        log_system_add_sensor(readTMP102_fd, 1, "tmp102_temperature");
-    }
-    if (optns->do_file_logging)
-    {
-        log_system_enable_file_logging("fridge_temperature_humidity");
-    }
-
 /*
     float humTemp[2];
     float temp;
@@ -180,82 +155,42 @@ void configure_logger(struct args_options* optns)
         return;
     }*/
 
-
-
-
-    //int local_logging_ok = 1;
-
-
-
-
-/* // THIS CODE IS MOVED TO log_loop()
-    const struct timespec delay = {.tv_sec = optns->period_ms/1000, .tv_nsec = (optns->period_ms % 1000) * 1000000};
-    char buffer_network[64];
-    char buffer_local[64];
-    int error = 0;
-    while (running)
+    log_system_init(optns->total_sensor_count, optns->period_ms);
+    if (optns->log_si7021)
     {
-        error = 0;
-        if (readSi7021(humTemp) < 0)
-        {
-            error = 1;
-        }
-        if (readTMP102(&temp) < 0)
-        {
-            error = 1;
-        }
-        if (error == 1)
-        {
-            sprintf(buffer_network, "mHumidity: %f\nTemp1: %f Temp2: %f\nError %i\n", humTemp[0], humTemp[1], temp, errno);
-            sprintf(buffer_local, "%i, %f, %f, %f\n", -1, humTemp[0], humTemp[1], temp);
-        }
-        else
-        {
-            sprintf(buffer_network, "mHumidity: %f\nTemp1: %f Temp2: %f\n", humTemp[0], humTemp[1], temp);
-            struct timeval t;
-            gettimeofday(&t, NULL);
-            sprintf(buffer_local, "%li, %f, %f, %f\n", t.tv_sec, humTemp[0], humTemp[1], temp);
-        }
-
-
-        if (optns->do_network_logging)
-        {
-            int len = strlen(buffer_network);
-            int bytes_sendt = sendto(sock, buffer_network, len+1, 0, (struct sockaddr*)&sa, sizeof(sa));
-            printf("sendt bytes: %i\n%s\n", bytes_sendt, buffer_network);
-        }
-
-        if (optns->do_file_logging)
-        {
-            int len = strlen(buffer_local);
-            if (local_logging_ok == 0)
-            {
-                if (br_data(buffer_local, len) != 0)
-                {
-                    printf("Error logging data\n");
-                }
-            }
-        }
-        nanosleep(&delay, 0);
+        log_system_add_sensor(readSi7021_fd, 2, "si7021_humidity, si7021_temperature");
     }
-    printf("Flushing data to file before exiting\n");
-    br_flush_buffer();
-    br_dealloc_buffer();
-    close(sock);*/
+    if (optns->log_tmp102)
+    {
+        log_system_add_sensor(readTMP102_fd, 1, "tmp102_temperature");
+    }
+    if (optns->do_file_logging)
+    {
+        log_system_enable_file_logging("fridge_temperature_humidity");
+    }
 }
-
-
 
 ////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv)
 {
-    print_args(argc, argv);
-
     struct args_options optns;
     int ret = parse_args(argc, argv, &optns);
 
-    print_args(argc, argv);
+    if (ret)
+    {
+        configure_logger(&optns);
+        log_loop();
+    }
+
+    return 0;
+}
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
 
 /*
     if (argc >= 2)
@@ -270,19 +205,6 @@ int main(int argc, char** argv)
             }
         }
     }*/
-
-    if (ret)
-    {
-        configure_logger(&optns);
-        log_loop();
-    }
-
-    return 0;
-}
-
-
-
-////////////////////////////////////////////////////////////////////////////////
 
 int writeADC(unsigned short val)
 {
