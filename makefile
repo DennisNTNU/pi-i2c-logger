@@ -5,3 +5,7 @@ TARGET = $(TARGET_DIR)/main
 $(TARGET): $(SRC)
 	mkdir -p build
 	gcc -o $@ $^ -Wall -Iinc
+
+.PHONY: clean
+clean:
+	rm -rf build
