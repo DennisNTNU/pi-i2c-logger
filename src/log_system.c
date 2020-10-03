@@ -50,7 +50,7 @@ int log_system_init(int max_sensor_count, unsigned short period_ms)
     }
     lopts.max_sensor_count = max_sensor_count;
     lopts.sensor_count = 0;
-    lopts.sensors_to_log = calloc(1, max_sensor_count*sizeof(struct logger_options));
+    lopts.sensors_to_log = calloc(1, max_sensor_count*sizeof(struct sensor_info_float));
 
     return 0;
 }
@@ -108,8 +108,11 @@ int log_system_enable_file_logging(char* log_name)
             256-header_buffer_offset, ", %s",
             lopts.sensors_to_log[i].header_part);
     }
+    header[header_buffer_offset] = '\n';
+    header[header_buffer_offset+1] = 0;
+
     printf("Full log file name: %s\n", log_file_name);
-    printf("File log header: %s\n", header);
+    printf("File log header: %s", header);
 
     printf("Initing file log buffer\n");
     int local_logging_ok = br_alloc_buffer(1024*4, log_file_name); // 4KiB
@@ -182,13 +185,14 @@ int log_loop()
 
         struct timeval t;
         gettimeofday(&t, NULL);
-        data_buffer_offset += snprintf(buffer, 256, "%li, ", t.tv_sec);
+        data_buffer_offset += snprintf(buffer, 256, "%li", t.tv_sec);
         for (int i = 0; i < float_count_total; i++)
         {
-            data_buffer_offset += sprintf(&(buffer[data_buffer_offset]), "%f, ", data_buffer[i]);
+            data_buffer_offset += sprintf(&(buffer[data_buffer_offset]), ", %f", data_buffer[i]);
         }
         //data_buffer_offset += sprintf(&(buffer[data_buffer_offset]), "\n");
         buffer[data_buffer_offset] = '\n';
+        buffer[data_buffer_offset+1] = 0;
         int len = strlen(buffer);
         if (br_data(buffer, len) != 0)
         {
