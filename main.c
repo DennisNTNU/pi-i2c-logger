@@ -25,6 +25,21 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
+struct args_options
+{
+    unsigned char do_file_logging;
+    unsigned char do_network_logging;
+    unsigned short period_ms;
+    char ip_port_str[32];
+
+    unsigned char log_si7021;
+    unsigned char log_tmp102;
+
+    int total_sensor_count;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+
 int writeADC(unsigned short val);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -38,7 +53,7 @@ void print_args(int argc, char** argv)
     printf("\n");
 }
 
-int parse_args(int argc, char** argv, struct logger_options* optns)
+int parse_args(int argc, char** argv, struct args_options* optns)
 {
     int c = 0;
     opterr = 0;
@@ -48,12 +63,11 @@ int parse_args(int argc, char** argv, struct logger_options* optns)
     strncpy(optns->ip_port_str, "10.0.0.3:3001", 32);
     optns->period_ms = 10000;
     optns->do_network_logging = 0;
-    optns->do_local_logging = 0;
-    /*
-    -h: si7021 sensor: temp & humidity
-    -t: tmp102 sensor: temp only
-    -s <ip>:<port>: specify server to send data to
-    */
+    optns->do_file_logging = 0;
+    optns->log_si7021 = 0;
+    optns->log_tmp102 = 0;
+    optns->total_sensor_count = 0;
+
     const char* options_string = ":htlLa:p:";
 
     while ((c = getopt(argc, argv, options_string)) != -1)
@@ -66,12 +80,16 @@ int parse_args(int argc, char** argv, struct logger_options* optns)
             float hum_temp_buffer[2];
             readSi7021(hum_temp_buffer);
             printf("Si7021: Humidity %f, Temp %f\n", hum_temp_buffer[0], hum_temp_buffer[1]);
+            optns->log_si7021 = 1;
+            optns->total_sensor_count++;
             break;
         case 't':
             printf("TMP102 option \"%c\"\n", c);
             float temp;
             readTMP102(&temp);
             printf("TMP102: Temp %f\n", temp);
+            optns->log_tmp102 = 1;
+            optns->total_sensor_count++;
             break;
 
         case 'l':
@@ -80,7 +98,7 @@ int parse_args(int argc, char** argv, struct logger_options* optns)
             break;
         case 'L':
             printf("local logging option (log to file) \"%c\"\n", c);
-            optns->do_local_logging = 1;
+            optns->do_file_logging = 1;
             break;
         case 'a':
             strncpy(optns->ip_port_str, optarg, 32);
@@ -109,7 +127,7 @@ int parse_args(int argc, char** argv, struct logger_options* optns)
             break;
         }
     }
-    return optns->do_network_logging | optns->do_local_logging;
+    return optns->do_network_logging | optns->do_file_logging;
 }
 
 
@@ -125,8 +143,23 @@ int parse_args(int argc, char** argv, struct logger_options* optns)
 
 
 
-void logging(struct logger_options* optns)
-{/*
+void configure_logger(struct args_options* optns)
+{
+    log_system_init(optns->total_sensor_count, optns->period_ms);
+    if (optns->log_si7021)
+    {
+        log_system_add_sensor(readSi7021_fd, 2, "si7021_humidity, si7021_temperature");
+    }
+    if (optns->log_tmp102)
+    {
+        log_system_add_sensor(readTMP102_fd, 1, "tmp102_temperature");
+    }
+    if (optns->do_file_logging)
+    {
+        log_system_enable_file_logging("fridge_temperature_humidity");
+    }
+
+/*
     float humTemp[2];
     float temp;
 
@@ -147,39 +180,15 @@ void logging(struct logger_options* optns)
         return;
     }*/
 
+
+
+
     //int local_logging_ok = 1;
-    if (optns->do_local_logging)
-    {
-        log_system_init(2);
-        log_system_add_sensor(readSi7021_fd, 2, "si7021_humidity, si7021_temperature");
-        log_system_add_sensor(readTMP102_fd, 1, "tmp102_temperature");
-        log_system_enable_file_logging("fridge_temperature_humidity");
 
-        log_start();
 
-        /*
-        printf("Initing local log buffer & path\n");
-        struct timeval t;
-        gettimeofday(&t, NULL);
-        char logfilename[32];
-        snprintf(logfilename, 32, "%li_data.log", t.tv_sec);
 
-        local_logging_ok = br_alloc_buffer(1024*4, logfilename); // 4KiB
-        if (local_logging_ok == 0)
-        {
-            char header[] = "time, humidity, temp si7021, temp tmp102\n";
-            int headerlen = strlen(header);
-            if (br_data(header, headerlen) != 0)
-            {
-                printf("Error logging header\n");
-            }
-        }
-        else
-        {
-            printf("local logging not ok: %i\n", local_logging_ok);
-        }*/
-    }
-/*
+
+/* // THIS CODE IS MOVED TO log_loop()
     const struct timespec delay = {.tv_sec = optns->period_ms/1000, .tv_nsec = (optns->period_ms % 1000) * 1000000};
     char buffer_network[64];
     char buffer_local[64];
@@ -216,7 +225,7 @@ void logging(struct logger_options* optns)
             printf("sendt bytes: %i\n%s\n", bytes_sendt, buffer_network);
         }
 
-        if (optns->do_local_logging)
+        if (optns->do_file_logging)
         {
             int len = strlen(buffer_local);
             if (local_logging_ok == 0)
@@ -239,18 +248,16 @@ void logging(struct logger_options* optns)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-
-
-
-
 int main(int argc, char** argv)
 {
-
-    struct logger_options optns;
     print_args(argc, argv);
+
+    struct args_options optns;
     int ret = parse_args(argc, argv, &optns);
+
     print_args(argc, argv);
 
+/*
     if (argc >= 2)
     {
         if (strcmp(argv[1], "adc") == 0)
@@ -262,15 +269,18 @@ int main(int argc, char** argv)
                 writeADC(val);
             }
         }
-    }
+    }*/
 
     if (ret)
     {
-        logging(&optns);
+        configure_logger(&optns);
+        log_loop();
     }
 
     return 0;
 }
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 

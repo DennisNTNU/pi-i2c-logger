@@ -37,13 +37,17 @@ static void signalHandler(int signal)
     }
 }
 
-int log_system_init(int max_sensor_count)
+int log_system_init(int max_sensor_count, unsigned short period_ms)
 {
     memset(lopts.ip_port_str, 0, 32);
     lopts.do_network_logging = 0;
     lopts.do_local_logging = 0;
 
-    lopts.period_ms = 10000;
+    lopts.period_ms = period_ms;
+    if (period_ms < 2000)
+    {
+        lopts.period_ms = 2000;
+    }
     lopts.max_sensor_count = max_sensor_count;
     lopts.sensor_count = 0;
     lopts.sensors_to_log = calloc(1, max_sensor_count*sizeof(struct logger_options));
@@ -87,9 +91,10 @@ int log_system_enable_file_logging(char* log_name)
     printf("Initing local log buffer & path\n");
 
     struct timeval t;
+    memset(&t, 0, sizeof(struct timeval));
     gettimeofday(&t, NULL);
 
-    char log_file_name[256];
+    char log_file_name[256] = "";
     snprintf(log_file_name, 256, "%li_%s.log", t.tv_sec, log_name);
 
     int header_buffer_offset = 0;
@@ -103,7 +108,10 @@ int log_system_enable_file_logging(char* log_name)
             256-header_buffer_offset, "%s, ",
             lopts.sensors_to_log[i].header_part);
     }
+    printf("Full log file name: %s\n", log_file_name);
+    printf("File log header: %s\n", header);
 
+    printf("Initing file log buffer\n");
     int local_logging_ok = br_alloc_buffer(1024*4, log_file_name); // 4KiB
     if (local_logging_ok == 0)
     {
@@ -129,7 +137,7 @@ int log_system_enable_network_logging(char* ip_port_str)
     return 0;
 }
 
-int log_start()
+int log_loop()
 {
     signal(SIGINT, signalHandler);
 
@@ -162,7 +170,7 @@ int log_start()
                 // on error set the measuement values to NaN
                 for (int j = 0; j < lopts.sensors_to_log[i].float_count; j++)
                 {
-                	data_buffer[current_float_count + j] =  NAN;
+                	data_buffer[current_float_count + j] = NAN;
                 }
             }
             current_float_count += lopts.sensors_to_log[i].float_count;

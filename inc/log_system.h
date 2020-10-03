@@ -28,7 +28,7 @@ struct sensor_info_float
 };
 
 
-int log_system_init(int max_sensor_count);
+int log_system_init(int max_sensor_count, unsigned short period_ms);
  // frees (struct sensor_info_float*) in the logger options struct
 int log_system_deinit();
 
@@ -38,6 +38,6 @@ int log_system_enable_file_logging(char* name);
 int log_system_enable_network_logging(char* ip_port_str);
 
 
-int log_start();
+int log_loop();
 
 #endif /* LOG_SYSTEM_H */
