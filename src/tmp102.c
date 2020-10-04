@@ -23,7 +23,7 @@ int readTMP102(float * temp)
         return -1;
     }
 
-    char buffer[4];
+    signed char buffer[4];
     char data = 0x00;
     if (write(fd, &data, 1) < 0)
     {
@@ -38,7 +38,7 @@ int readTMP102(float * temp)
 
     //printf("%x %x\n", buffer[0], buffer[1]);
 
-    *temp = ((buffer[0] << 8) | buffer[1]) >> 4;
+    *temp = ((buffer[0] << 8) | (unsigned char)buffer[1]) >> 4;
     *temp = *temp *0.0625;
     
     return 0;
@@ -52,7 +52,7 @@ int readTMP102_fd(int fd_i2c, float* temp)
         return -1;
     }
 
-    char buffer[4];
+    signed char buffer[4];
     char data = 0x00;
     if (write(fd_i2c, &data, 1) < 0)
     {
@@ -66,7 +66,7 @@ int readTMP102_fd(int fd_i2c, float* temp)
 
     //printf("%x %x\n", buffer[0], buffer[1]);
 
-    *temp = ((buffer[0] << 8) | buffer[1]) >> 4;
+    *temp = ((buffer[0] << 8) | (unsigned char)buffer[1]) >> 4;
     *temp = *temp *0.0625;
     
     return 0;
