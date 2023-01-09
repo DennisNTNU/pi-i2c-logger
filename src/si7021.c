@@ -42,7 +42,7 @@ int readSi7021(float * data)
     {
         nanosleep(&_200us, 0);
         nacks++;
-        if (nacks > 100) 
+        if (nacks > 100)
         {
             printf("reading humidity. timeout\n");
             close(fd);
@@ -61,7 +61,7 @@ int readSi7021(float * data)
         close(fd);
         return -1;
     }
-    
+
     if (read(fd, buffer, 2) < 0)
     {
         printf("Error reading temperature\n");
@@ -106,9 +106,9 @@ int readSi7021_fd(int fd_i2c, float* data)
     {
         nanosleep(&_200us, 0);
         nacks++;
-        if (nacks > 100) 
+        if (nacks > 100)
         {
-            printf("reading humidity. timeout\n");
+            printf("reading humidity timeout\n");
             return -1;
         }
     }
@@ -123,7 +123,7 @@ int readSi7021_fd(int fd_i2c, float* data)
         printf("Error writing temperature read command\n");
         return -1;
     }
-    
+
     if (read(fd_i2c, buffer, 2) < 0)
     {
         printf("Error reading temperature\n");
