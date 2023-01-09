@@ -1,10 +1,10 @@
 SRC = main.c src/si7021.c src/tmp102.c src/buffered_writer.c src/log_system.c
 TARGET_DIR = build
-TARGET = $(TARGET_DIR)/main
+TARGET = $(TARGET_DIR)/tloggerd
 
 $(TARGET): $(SRC)
 	mkdir -p build
-	gcc -o $@ $^ -Wall -Iinc
+	gcc $^ -Wall -Iinc -o $@
 
 .PHONY: clean
 clean:
